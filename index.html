@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<link rel="stylesheet" type="text/css" href="css/ui-box.css">
+	<style type="text/css">
+		#drag{
+			position: absolute;
+			left:50%;
+			top: 50px;
+			margin-left:-350px;
+			display:block;
+		}
+	</style>
+</head>
+<body>
+	<div id="drag">
+		<div class="ui-box">
+			<div class="ui-box-header">
+				<span class="ctrl ctrl-close">x</span>
+				<ul class="ui-box-tab">
+					<li id="aa" class="tab-item active">1<span class="tab-item-ctrl" data-tab-index='0'>x</span></li>
+					<li class="tab-item">2<span class="tab-item-ctrl" data-tab-index='1'>x</span></li>
+					<li class="tab-item">3<span class="tab-item-ctrl" data-tab-index='2'>x</span></li>
+				</ul>
+			</div>
+			<div class="ui-box-body">
+				<ul class="tab-content">
+					<li class="tab-content-item">
+						<div class="tab-container" data-tab-index='0'>
+							adf
+						</div>
+					</li>
+					<li class="tab-content-item" data-tab-index='1'>
+						<div class="tab-container">
+							bbb
+						</div>
+					</li>
+					<li class="tab-content-item" data-tab-index='2'>
+						<div class="tab-container">
+							ccc
+						</div>
+					</li>
+				</ul>
+			</div>
+			<div class="ui-box-footer"></div>
+		</div>
+	</div>
+	<input type="button" id="addTab" value="增加">
+</body>
+<script type="text/javascript" src="js/jquery.min.js"></script>
+<script type="text/javascript" src="js/drag.js"></script>
+<script type="text/javascript">
+window.debug = true;
+function log(k,v ) {
+	if (window.debug && window.console && console.log) {
+		v ? console.log(k, v) : console.log(k);
+	}
+};
+
+	function appendNewTab (targetId, json, callback) {
+		var oTarget = $(targetId),
+			oDrag = oTarget,
+			oBox = oDrag.find('.ui-box'),
+			oHeader = oBox.find('.ui-box-header'),
+			oTab = oHeader.find('ul.ui-box-tab'),
+			aTabItems = oTab.find('li.tab-item'),
+			oBody =  oBox.find('.ui-box-body'),
+			oContUl = oBody.find('ul.tab-content');
+
+		var tab = buildTabItem('title', json['title'], aTabItems.length);
+		var $tab = $(tab);
+		var cont = buildTabItem('content', json['content']);
+		var $cont = $(cont);
+		oTab.append($tab);
+		oContUl.append($cont);
+		$cont.hide();
+	}
+
+	function buildTabItem (type, text, index) {
+		var fragment = '';
+		if (type == 'title') {
+			fragment += '<li class="tab-item">'+text+'<span class="tab-item-ctrl" data-tab-index="'+index+'">x</span></li>';
+		} else if (type == 'content') {
+			fragment += '<li class="tab-content-item" data-tab-index="'+index+'"><div class="tab-container">'+text+'</div></li>';
+		}
+
+		return fragment;
+	}
+
+
+	function displayTab(boxId, obj, index){
+		var oDrag = $(boxId),
+			oBox = oDrag.find('.ui-box'),
+			oHeader = oBox.find('.ui-box-header'),
+			oTab = oHeader.find('.ui-box-tab'),
+			aTabItems = $(this).children('li'),
+			oBody =  oBox.find('.ui-box-body'),
+			aContents = oBody.find('.tab-content-item');
+
+		$('.tab-item').removeClass('active');
+		$(obj).addClass('active');
+		aContents.hide();
+		aContents.eq(index).fadeIn();
+	}
+
+	function destroyTab (boxId, obj, index) {
+		if (confirm('确认要删除这一标签及内容吗？')) {
+			var oDrag = $(boxId),
+				oBox = oDrag.find('.ui-box'),
+				oHeader = oBox.find('.ui-box-header'),
+				oTab = oHeader.find('.ui-box-tab'),
+				aTabItems = $(this).children('li'),
+				oBody =  oBox.find('.ui-box-body'),
+				aContents = oBody.find('.tab-content-item');
+
+			$(obj).closest('.tab-item').remove();
+			aContents.eq(index).remove();
+			var pre = index-1 >= 0 ? index-1 : 0;
+			$('.tab-item').eq(pre).trigger('click');
+		}
+	}
+	function initTab (boxId) {
+		
+		var oTab = $(boxId).find('ul.ui-box-tab'),
+			oHeader = $(boxId).find('.ui-box-header');
+		$('.ui-box-tab').on('click', 'li', function (ev){
+			var target = ev.target;
+			var tagName = target.tagName.toLowerCase();
+			if (tagName == 'span') {
+				destroyTab(boxId, this, $(this).index());
+			} else {
+				displayTab(boxId, this, $(this).index());
+			}
+			
+		});
+
+		$('.tab-item-ctrl').each(function (index){
+			$(this).click(function (){
+				if (confirm('确定要删除这个标签？')){
+					$(this).closest('.tab-item').remove();
+					$('.tab-content-item').eq(index).remove();
+				}
+			});
+		});
+
+		oTab.children('li').eq(0).trigger('click');
+		
+		oHeader.find('.ctrl-close').on('click', function (){
+			$(boxId).fadeOut('slow').hide();
+		});
+		oHeader.draggable({
+
+		});
+		var testJSON = {
+			'title' : '测试标题',
+			'content' : '测试内容'
+		};
+
+
+		$('#addTab').on('click', function (){
+			appendNewTab('#drag', testJSON);
+		});
+	}
+
+	function loadModal(url, boxId){
+		boxId = boxId || '#dragModal';
+		$.ajax({
+			url : url,
+			type : "get",
+			dataType : 'html', 
+			success : function (html){
+				var json = {
+					'title' : ,
+					'content' : html,
+				};
+				appendNewTab(boxId, json, function (){
+					$(boxId).fadeIn('slow');
+				})
+			}
+		});
+	}
+	$(function (){
+		initTab('#drag');
+	});
+</script>
+</html>
