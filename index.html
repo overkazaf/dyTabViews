@@ -59,38 +59,146 @@ function log(k,v ) {
 	}
 };
 
-	function appendNewTab (targetId, json, callback) {
-		var oTarget = $(targetId),
-			oDrag = oTarget,
-			oBox = oDrag.find('.ui-box'),
-			oHeader = oBox.find('.ui-box-header'),
-			oTab = oHeader.find('ul.ui-box-tab'),
-			aTabItems = oTab.find('li.tab-item'),
-			oBody =  oBox.find('.ui-box-body'),
-			oContUl = oBody.find('ul.tab-content');
+	$(document).ready(function(){
+	 $('#mainContent').css('height',$(document).height()-65);
+	// $('#ma_1').click();
+	 document.getElementById("ma_1").click();
 
-		var tab = buildTabItem('title', json['title'], aTabItems.length);
-		var $tab = $(tab);
-		var cont = buildTabItem('content', json['content']);
-		var $cont = $(cont);
-		oTab.append($tab);
-		oContUl.append($cont);
-		$cont.hide();
+	 $('#serchBtn, #aside-arrow').on('click', function (){
+	 	slideAside(function (){
+			var url = 'http://61.155.85.78:1683/trueWorkFlow/eworkflow_getDoFileList.do',
+				oTarget = $('#aside').find('.aside-body');
+			var oIframe = $('<iframe>').attr({
+				src : url,
+				width : '100%',
+				height : '100%',
+				border : '0',
+				frameborder : 'no'
+			});
+			var fn1 = function (){
+				oTarget.empty().html(oIframe);
+			};
+			
+			var fn2 = function (){
+				oIframe.css({
+					width : oTarget.width() - 2 + 'px',
+					height: oTarget.height() - 2 + 'px'
+				});
+				oIframe.on('load', function (){
+					var $docBody = oIframe.contents().find('body');
+					var $tab = $docBody.find('table.search-table');
+					$tab.attr({
+						style : 'width : 540px !important;'
+					});
+				});
+			};
+			
+			var cb = $.Callbacks();
+			cb.add(fn1);
+			cb.add(fn2);
+			cb.fire();
+			
+		});
+	 });
+
+	 initModal('#dragModal', true);
+	 
+	 $('#dragModal').draggable({
+	 	context : '#dragModal',
+		movedItem : '#dragModal',
+		handlerClass : '.ui-box-header'
+	 });
+ });
+ 
+/* Aside Slider */
+function slideAside(callback){
+	var sld = $('#aside');
+	var r = sld.css('right'),
+		op = sld.css('opacity');
+	var tar = parseInt(r) < 0 ? 0 : '-600px',
+		tarOp = op == 0.5  ? 1 : 0.5,
+		arrow = $('#aside-arrow');
+	sld.animate({
+		right : tar,
+		opacity : tarOp
+	});
+	
+	if (arrow.hasClass('aside-arrow-left')) {
+		arrow.removeClass('aside-arrow-left').addClass('aside-arrow-right');
+	} else {
+		arrow.removeClass('aside-arrow-right').addClass('aside-arrow-left');
 	}
 
-	function buildTabItem (type, text, index) {
-		var fragment = '';
-		if (type == 'title') {
-			fragment += '<li class="tab-item">'+text+'<span class="tab-item-ctrl" data-tab-index="'+index+'">x</span></li>';
-		} else if (type == 'content') {
-			fragment += '<li class="tab-content-item" data-tab-index="'+index+'"><div class="tab-container">'+text+'</div></li>';
+	if (callback && $.isFunction(callback)) {
+		if (!sld.data('loaded')) {
+			callback.call(this);
+			sld.data('loaded', true);
 		}
+	}
+}
 
-		return fragment;
+/* Dynamic Tab Viewer */
+function appendNewTab (targetId, json, callback) {
+	var oTarget = $(targetId),
+		oDrag = oTarget,
+		oBox = oDrag.find('.ui-box'),
+		oHeader = oBox.find('.ui-box-header'),
+		oTab = oHeader.find('ul.ui-box-tab'),
+		aTabItems = oTab.find('li.tab-item'),
+		oBody =  oBox.find('.ui-box-body'),
+		oContUl = oBody.find('ul.tab-content');
+
+	var tab = buildTabItem('title', json['title'], aTabItems.length);
+	var $tab = $(tab);
+	var cont = buildTabItem('content', json['content']);
+	var $cont = $(cont);
+	oTab.append($tab);
+	oContUl.append($cont);
+	$cont.hide();
+	$('.tab-item').last().trigger('click');
+	
+	if (callback && $.isFunction(callback)){
+		callback.call(this);
+	}
+}
+
+function buildTabItem (type, text, index) {
+	var fragment = '';
+	if (type == 'title') {
+		fragment += '<li class="tab-item">'+text+'<span class="tab-item-ctrl" data-tab-index="'+index+'">x</span></li>';
+	} else if (type == 'content') {
+		fragment = '<li class="tab-content-item" data-tab-index="'+index+'"><div class="tab-container"></div></li>';
+		fragment =  $(fragment);
+		$(text).appendTo(fragment.find('.tab-container'));
+		$(text).css({
+			width : '100%',
+			height : '100%'
+		});
 	}
 
+	return fragment;
+}
 
-	function displayTab(boxId, obj, index){
+
+function displayTab(boxId, obj, index){
+	var oDrag = $(boxId),
+		oBox = oDrag.find('.ui-box'),
+		oHeader = oBox.find('.ui-box-header'),
+		oTab = oHeader.find('.ui-box-tab'),
+		aTabItems = $(this).children('li'),
+		oBody =  oBox.find('.ui-box-body'),
+		aContents = oBody.find('.tab-content-item');
+
+	if (!$(obj).hasClass('active')) {
+		$('.tab-item').removeClass('active');
+		$(obj).addClass('active');
+		aContents.hide();
+		aContents.eq(index).fadeIn();
+	}
+}
+
+function destroyTab (boxId, obj, index) {
+	if (confirm('确认要删除这一标签及内容吗？')) {
 		var oDrag = $(boxId),
 			oBox = oDrag.find('.ui-box'),
 			oHeader = oBox.find('.ui-box-header'),
@@ -99,90 +207,104 @@ function log(k,v ) {
 			oBody =  oBox.find('.ui-box-body'),
 			aContents = oBody.find('.tab-content-item');
 
-		$('.tab-item').removeClass('active');
-		$(obj).addClass('active');
-		aContents.hide();
-		aContents.eq(index).fadeIn();
-	}
-
-	function destroyTab (boxId, obj, index) {
-		if (confirm('确认要删除这一标签及内容吗？')) {
-			var oDrag = $(boxId),
-				oBox = oDrag.find('.ui-box'),
-				oHeader = oBox.find('.ui-box-header'),
-				oTab = oHeader.find('.ui-box-tab'),
-				aTabItems = $(this).children('li'),
-				oBody =  oBox.find('.ui-box-body'),
-				aContents = oBody.find('.tab-content-item');
-
-			$(obj).closest('.tab-item').remove();
-			aContents.eq(index).remove();
-			var pre = index-1 >= 0 ? index-1 : 0;
-			$('.tab-item').eq(pre).trigger('click');
-		}
-	}
-	function initTab (boxId) {
+		var tab = $(obj).closest('.tab-item'),
+			title = tab.text(),
+			title = title.substring(0,title.length-1);
+		$(obj).closest('.tab-item').remove();
+		delete modalCache[title];
 		
-		var oTab = $(boxId).find('ul.ui-box-tab'),
-			oHeader = $(boxId).find('.ui-box-header');
-		$('.ui-box-tab').on('click', 'li', function (ev){
-			var target = ev.target;
-			var tagName = target.tagName.toLowerCase();
-			if (tagName == 'span') {
-				destroyTab(boxId, this, $(this).index());
+		aContents.eq(index).remove();
+		
+		var aTabs = $('.tab-item');
+		if (aTabs.length) {
+			if (aTabs.filter('.active').length) {
+				//do noting
 			} else {
-				displayTab(boxId, this, $(this).index());
+				var pre = index-1 >= 0 ? index-1 : 0;
+				aTabs.eq(pre).trigger('click');
 			}
-			
-		});
-
-		$('.tab-item-ctrl').each(function (index){
-			$(this).click(function (){
-				if (confirm('确定要删除这个标签？')){
-					$(this).closest('.tab-item').remove();
-					$('.tab-content-item').eq(index).remove();
-				}
-			});
-		});
-
-		oTab.children('li').eq(0).trigger('click');
+		} else {
+			oDrag.fadeOut();
+		}
+		 
+	}
+}
+function initModal(boxId, forceRefresh) {
+	
+	var oBox = $(boxId),
+		oTab = oBox.find('ul.ui-box-tab'),
+		oHeader = oBox.find('.ui-box-header');
+	$('.ui-box-tab').on('click', 'li', function (ev){
+		var target = ev.target;
+		var tagName = target.tagName.toLowerCase();
+		if (tagName == 'span') {
+			destroyTab(boxId, this, $(this).index());
+		} else {
+			displayTab(boxId, this, $(this).index());
+		}
 		
-		oHeader.find('.ctrl-close').on('click', function (){
-			$(boxId).fadeOut('slow').hide();
-		});
-		oHeader.draggable({
+	});
 
-		});
-		var testJSON = {
-			'title' : '测试标题',
-			'content' : '测试内容'
-		};
-
-
-		$('#addTab').on('click', function (){
-			appendNewTab('#drag', testJSON);
-		});
-	}
-
-	function loadModal(url, boxId){
-		boxId = boxId || '#dragModal';
-		$.ajax({
-			url : url,
-			type : "get",
-			dataType : 'html', 
-			success : function (html){
-				var json = {
-					'title' : ,
-					'content' : html,
-				};
-				appendNewTab(boxId, json, function (){
-					$(boxId).fadeIn('slow');
-				})
+	$('.tab-item-ctrl').each(function (index){
+		$(this).click(function (){
+			if (confirm('确定要删除这个标签？')){
+				$(this).closest('.tab-item').remove();
+				$('.tab-content-item').eq(index).remove();
 			}
 		});
-	}
-	$(function (){
-		initTab('#drag');
 	});
+	
+	oBox.find('span.ctrl-close').on('click', function (){
+		oBox.fadeOut();
+		if (forceRefresh) {
+			var frame= document.getElementById('mainContent');
+			var $frame = $(frame);
+			var href = $frame.attr('src');
+			// force to refresh the iframe
+			$frame.attr({
+				src : href
+			});
+		}
+	});
+	if ($('.tab-item').length){
+		$('.tab-item').first().trigger('click');
+	}
+}
+
+modalCache = {};
+function loadModal(url, title, boxId){
+	title = title || '标题'+ ~~(Math.random()*100);
+	boxId = boxId || '#dragModal';
+	var oBox = $(boxId);
+	
+	if (!modalCache[title]) {
+		modalCache[title] = url;
+		var oIframe = $('<iframe>').attr({
+			src : url,
+			height : '100%',
+			width : '100%',
+			frameborder : 'no',
+			border : 0,
+			scrolling : 'no'
+		});
+		
+		var json = {
+			'title' : title,
+			'content' : oIframe,
+		};
+		
+		appendNewTab(boxId, json, function (){
+			oIframe.css({
+				width : '100%',
+				height : '500px'
+			});
+			oBox.fadeIn('slow');
+		});
+	} else {
+		oBox.fadeIn('slow');
+	}
+}
+
+/* Dynamic Tab Viewer End */
 </script>
 </html>
